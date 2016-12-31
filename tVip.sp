@@ -168,9 +168,6 @@ public void showPlayerSelectMenu(int client, int reason) {
 		if (IsFakeClient(i))
 			continue;
 		
-		if (isVipCheck(i))
-			continue;
-			
 		if(reason == 2){
 			if(!g_bIsVip[client])
 				continue;
