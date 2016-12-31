@@ -170,6 +170,14 @@ public void showPlayerSelectMenu(int client, int reason) {
 		
 		if (isVipCheck(i))
 			continue;
+			
+		if(reason == 2){
+			if(!g_bIsVip[client])
+				continue;
+		}else if(reason == 1){
+			if(g_bIsVip[client])
+				continue;
+		}
 		
 		char Id[64];
 		IntToString(i, Id, sizeof(Id));
@@ -230,7 +238,7 @@ public void grantVip(int admin, int client, int duration) {
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, updateTime);
 	
 	CPrintToChat(admin, "{green}Added {orange}%s{green} as VIP with {orange}%i{green} Month", playername, duration);
-	CPrintToChat(admin, "{green}You've been granted {orange}%i{green} Month of {orange}VIP{green} by {orange}%N", playername, duration, admin);
+	CPrintToChat(client, "{green}You've been granted {orange}%i{green} Month of {orange}VIP{green} by {orange}%N", duration, admin);
 	setFlags(client);
 }
 
