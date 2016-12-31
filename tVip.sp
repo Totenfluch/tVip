@@ -37,7 +37,11 @@ public void OnPluginStart() {
 	SQL_SetCharset(g_DB, "utf8");
 	
 	char createTableQuery[4096];
-	Format(createTableQuery, sizeof(createTableQuery), "CREATE TABLE IF NOT EXISTS tVip (`Id`BIGINT NOT NULL AUTO_INCREMENT, `timestamp`TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, `playername`VARCHAR(36)CHARACTER SET utf8 COLLATE utf8_bin NOT NULL, `playerid`VARCHAR(20)NOT NULL, `enddate`TIMESTAMP NOT NULL, `admin_playername`VARCHAR(36)CHARACTER SET utf8 COLLATE utf8_bin NOT NULL, `admin_playerid`VARCHAR(20)NOT NULL, PRIMARY KEY(`Id`))ENGINE = InnoDB CHARSET = utf8 COLLATE utf8_bin; ");
+	Format(createTableQuery, sizeof(createTableQuery), 
+	"CREATE TABLE IF NOT EXISTS tVip (`Id`BIGINT NOT NULL AUTO_INCREMENT, `timestamp`TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\
+	`playername`VARCHAR(36)CHARACTER SET utf8 COLLATE utf8_bin NOT NULL, `playerid`VARCHAR(20)NOT NULL, `enddate`TIMESTAMP NOT NULL,\
+	`admin_playername`VARCHAR(36)CHARACTER SET utf8 COLLATE utf8_bin NOT NULL, `admin_playerid`VARCHAR(20)NOT NULL, PRIMARY KEY(`Id`))\
+	ENGINE = InnoDB CHARSET = utf8 COLLATE utf8_bin; ");
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, createTableQuery);
 	
 	RegAdminCmd("sm_tvip", cmdtVIP, ADMFLAG_ROOT, "Opens the tVIP menu");
