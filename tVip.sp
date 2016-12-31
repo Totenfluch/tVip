@@ -469,10 +469,7 @@ public int detailsMenuHandler(Handle menu, MenuAction action, int client, int it
 }
 
 stock bool isValidClient(int client) {
-	if (!(1 <= client <= MaxClients) || !IsClientInGame(client))
-		return false;
-	
-	return true;
+    return (1 <= client <= MaxClients && IsClientInGame(client));
 }
 
 stock bool isVipCheck(int client) {
