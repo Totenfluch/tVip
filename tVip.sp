@@ -5,8 +5,8 @@
 
 #include <sourcemod>
 #include <sdktools>
-#include <smlib>
 #include <multicolors>
+#include <autoexecconfig>
 
 #pragma newdecls required
 
@@ -18,7 +18,10 @@ Database g_DB;
 	19 -> Custom5
 	20 -> Custom6
 */
+
+Handle g_hFlag;
 int g_iFlag = 19;
+
 
 bool g_bIsVip[MAXPLAYERS + 1];
 
@@ -44,9 +47,22 @@ public void OnPluginStart() {
 	ENGINE = InnoDB CHARSET = utf8 COLLATE utf8_bin; ");
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, createTableQuery);
 	
+	
+	AutoExecConfig_SetFile("tVip");
+	AutoExecConfig_SetCreateFile(true);
+	
+	g_hFlag = AutoExecConfig_CreateConVar("tVip_flag", "19", "20=Custom6, 19=Custom5 etc. Numeric Flag See: 'https://wiki.alliedmods.net/Checking_Admin_Flags_(SourceMod_Scripting)' for Definitions");
+	
+	AutoExecConfig_CleanFile();
+	AutoExecConfig_ExecuteFile();
+	
 	RegAdminCmd("sm_tvip", cmdtVIP, ADMFLAG_ROOT, "Opens the tVIP menu");
 	RegAdminCmd("sm_addvip", cmdAddVip, ADMFLAG_ROOT, "Adds a VIP Usage: sm_addvip \"<SteamID>\" <Duration in Month> \"<Name>\"");
 	RegConsoleCmd("sm_vips", cmdListVips, "Shows all VIPs");
+}
+
+public void OnConfigsExecuted() {
+	g_iFlag = GetConVarInt(g_hFlag);
 }
 
 public Action cmdAddVip(int client, int args) {
@@ -86,7 +102,7 @@ public Action cmdtVIP(int client, int args) {
 
 public Action cmdListVips(int client, int args) {
 	char showOffVIPQuery[1024];
-	Format(showOffVIPQuery, sizeof(showOffVIPQuery), "SELECT * FROM tVip WHERE NOW() < enddate;");
+	Format(showOffVIPQuery, sizeof(showOffVIPQuery), "SELECT playername,playerid FROM tVip WHERE NOW() < enddate;");
 	SQL_TQuery(g_DB, SQLShowOffVipQuery, showOffVIPQuery, client);
 }
 
@@ -97,8 +113,8 @@ public void SQLShowOffVipQuery(Handle owner, Handle hndl, const char[] error, an
 	while (SQL_FetchRow(hndl)) {
 		char playerid[20];
 		char playername[MAX_NAME_LENGTH + 8];
-		SQL_FetchStringByName(hndl, "playername", playername, sizeof(playername));
-		SQL_FetchStringByName(hndl, "playerid", playerid, sizeof(playerid));
+		SQL_FetchString(hndl, 0, playername, sizeof(playername));
+		SQL_FetchString(hndl, 1, playerid, sizeof(playerid));
 		AddMenuItem(showOffMenu, playerid, playername, ITEMDRAW_DISABLED);
 	}
 	DisplayMenu(showOffMenu, client, 60);
@@ -306,7 +322,7 @@ public void reloadVIPs() {
 
 public void showAllVIPsToAdmin(int client) {
 	char selectAllVIPs[1024];
-	Format(selectAllVIPs, sizeof(selectAllVIPs), "SELECT * FROM tVip WHERE NOW() < enddate;");
+	Format(selectAllVIPs, sizeof(selectAllVIPs), "SELECT playername,playerid FROM tVip WHERE NOW() < enddate;");
 	SQL_TQuery(g_DB, SQLListVIPsForRemoval, selectAllVIPs, client);
 }
 
@@ -317,8 +333,8 @@ public void SQLListVIPsForRemoval(Handle owner, Handle hndl, const char[] error,
 	while (SQL_FetchRow(hndl)) {
 		char playerid[20];
 		char playername[MAX_NAME_LENGTH + 8];
-		SQL_FetchStringByName(hndl, "playername", playername, sizeof(playername));
-		SQL_FetchStringByName(hndl, "playerid", playerid, sizeof(playerid));
+		SQL_FetchString(hndl, 0, playername, sizeof(playername));
+		SQL_FetchString(hndl, 1, playerid, sizeof(playerid));
 		AddMenuItem(menuToRemoveClients, playerid, playername);
 	}
 	DisplayMenu(menuToRemoveClients, client, 60);
@@ -385,7 +401,7 @@ public void extendVip(int client, int userTarget, int duration) {
 
 public void listUsers(int client) {
 	char listVipsQuery[1024];
-	Format(listVipsQuery, sizeof(listVipsQuery), "SELECT * FROM tVip WHERE enddate > NOW();");
+	Format(listVipsQuery, sizeof(listVipsQuery), "SELECT playername,playerid FROM tVip WHERE enddate > NOW();");
 	SQL_TQuery(g_DB, SQLListVIPsQuery, listVipsQuery, client);
 }
 
@@ -396,8 +412,8 @@ public void SQLListVIPsQuery(Handle owner, Handle hndl, const char[] error, any 
 	while (SQL_FetchRow(hndl)) {
 		char playerid[20];
 		char playername[MAX_NAME_LENGTH + 8];
-		SQL_FetchStringByName(hndl, "playername", playername, sizeof(playername));
-		SQL_FetchStringByName(hndl, "playerid", playerid, sizeof(playerid));
+		SQL_FetchString(hndl, 0, playername, sizeof(playername));
+		SQL_FetchString(hndl, 1, playerid, sizeof(playerid));
 		AddMenuItem(menuToRemoveClients, playerid, playername);
 	}
 	DisplayMenu(menuToRemoveClients, client, 60);
@@ -408,7 +424,7 @@ public int listVipsMenuHandler(Handle menu, MenuAction action, int client, int i
 		char cValue[20];
 		GetMenuItem(menu, item, cValue, sizeof(cValue));
 		char detailsQuery[512];
-		Format(detailsQuery, sizeof(detailsQuery), "SELECT * FROM tVip WHERE playerid = '%s';", cValue);
+		Format(detailsQuery, sizeof(detailsQuery), "SELECT playername,playerid,enddate,timestamp,admin_playername,admin_playerid FROM tVip WHERE playerid = '%s';", cValue);
 		SQL_TQuery(g_DB, SQLDetailsQuery, detailsQuery, client);
 	}
 }
@@ -424,12 +440,12 @@ public void SQLDetailsQuery(Handle owner, Handle hndl, const char[] error, any d
 		char endDate[128];
 		char adminname[MAX_NAME_LENGTH + 8];
 		char adminplayerid[20];
-		SQL_FetchStringByName(hndl, "playername", playername, sizeof(playername));
-		SQL_FetchStringByName(hndl, "playerid", playerid, sizeof(playerid));
-		SQL_FetchStringByName(hndl, "enddate", endDate, sizeof(endDate));
-		SQL_FetchStringByName(hndl, "timestamp", startDate, sizeof(startDate));
-		SQL_FetchStringByName(hndl, "admin_playername", adminname, sizeof(adminname));
-		SQL_FetchStringByName(hndl, "admin_playerid", adminplayerid, sizeof(adminplayerid));
+		SQL_FetchString(hndl, 0, playername, sizeof(playername));
+		SQL_FetchString(hndl, 1, playerid, sizeof(playerid));
+		SQL_FetchString(hndl, 2, endDate, sizeof(endDate));
+		SQL_FetchString(hndl, 3, startDate, sizeof(startDate));
+		SQL_FetchString(hndl, 4, adminname, sizeof(adminname));
+		SQL_FetchString(hndl, 5, adminplayerid, sizeof(adminplayerid));
 		
 		char title[64];
 		Format(title, sizeof(title), "Details: %s", playername);
