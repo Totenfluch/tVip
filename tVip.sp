@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Totenfluch"
-#define PLUGIN_VERSION "1.00"
+#define PLUGIN_VERSION "1.2"
 
 #include <sourcemod>
 #include <sdktools>
@@ -19,8 +19,12 @@ Database g_DB;
 	20 -> Custom6
 */
 
+Handle g_hTestVipDuration;
+int g_iTestVipDuration;
+
 Handle g_hFlag;
-int g_iFlag = 19;
+int g_iFlags[20];
+int g_iFlagCount = 0;
 
 
 bool g_bIsVip[MAXPLAYERS + 1];
@@ -31,7 +35,7 @@ public Plugin myinfo =
 	author = PLUGIN_AUTHOR, 
 	description = "VIP functionality for the GGC", 
 	version = PLUGIN_VERSION, 
-	url = "http://ggc-base.de"
+	url = "http://totenfluch.de"
 };
 
 public void OnPluginStart() {
@@ -41,7 +45,7 @@ public void OnPluginStart() {
 	
 	char createTableQuery[4096];
 	Format(createTableQuery, sizeof(createTableQuery), 
-	"CREATE TABLE IF NOT EXISTS tVip (`Id`BIGINT NOT NULL AUTO_INCREMENT, `timestamp`TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\
+		"CREATE TABLE IF NOT EXISTS tVip (`Id`BIGINT NOT NULL AUTO_INCREMENT, `timestamp`TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\
 	`playername`VARCHAR(36)CHARACTER SET utf8 COLLATE utf8_bin NOT NULL, `playerid`VARCHAR(20)NOT NULL, `enddate`TIMESTAMP NOT NULL,\
 	`admin_playername`VARCHAR(36)CHARACTER SET utf8 COLLATE utf8_bin NOT NULL, `admin_playerid`VARCHAR(20)NOT NULL, PRIMARY KEY(`Id`))\
 	ENGINE = InnoDB CHARSET = utf8 COLLATE utf8_bin; ");
@@ -51,7 +55,8 @@ public void OnPluginStart() {
 	AutoExecConfig_SetFile("tVip");
 	AutoExecConfig_SetCreateFile(true);
 	
-	g_hFlag = AutoExecConfig_CreateConVar("tVip_flag", "19", "20=Custom6, 19=Custom5 etc. Numeric Flag See: 'https://wiki.alliedmods.net/Checking_Admin_Flags_(SourceMod_Scripting)' for Definitions");
+	g_hFlag = AutoExecConfig_CreateConVar("tVip_flag", "19", "20=Custom6, 19=Custom5 etc. Numeric Flag See: 'https://wiki.alliedmods.net/Checking_Admin_Flags_(SourceMod_Scripting)' for Definitions ---- Multiple flags seperated with Comma: '16 17 18 19' !!");
+	g_hTestVipDuration = AutoExecConfig_CreateConVar("tVip_testVipDuration", "15", "Test Vip duration in minutes");
 	
 	AutoExecConfig_CleanFile();
 	AutoExecConfig_ExecuteFile();
@@ -59,10 +64,66 @@ public void OnPluginStart() {
 	RegAdminCmd("sm_tvip", cmdtVIP, ADMFLAG_ROOT, "Opens the tVIP menu");
 	RegAdminCmd("sm_addvip", cmdAddVip, ADMFLAG_ROOT, "Adds a VIP Usage: sm_addvip \"<SteamID>\" <Duration in Month> \"<Name>\"");
 	RegConsoleCmd("sm_vips", cmdListVips, "Shows all VIPs");
+	RegConsoleCmd("sm_vip", openVipPanel, "Opens the Vip Menu");
 }
 
 public void OnConfigsExecuted() {
-	g_iFlag = GetConVarInt(g_hFlag);
+	g_iTestVipDuration = GetConVarInt(g_hTestVipDuration);
+	char cFlags[256];
+	GetConVarString(g_hFlag, cFlags, sizeof(cFlags));
+	char cSplinters[20][6];
+	for (int i = 0; i < 20; i++)
+	strcopy(cSplinters[i], 6, "");
+	ExplodeString(cFlags, " ", cSplinters, 20, 6);
+	for (int i = 0; i < 20; i++) {
+		if (StrEqual(cSplinters[i], ""))
+			break;
+		g_iFlags[g_iFlagCount++] = StringToInt(cSplinters[i]);
+	}
+}
+
+public Action openVipPanel(int client, int args) {
+	if (g_bIsVip[client]) {
+		char playerid[20];
+		GetClientAuthId(client, AuthId_Steam2, playerid, sizeof(playerid));
+		
+		char getDatesQuery[1024];
+		Format(getDatesQuery, sizeof(getDatesQuery), "SELECT timestamp,enddate,DATEDIFF(enddate, NOW()) as timeleft FROM tVip WHERE playerid = '%s';", playerid);
+		
+		SQL_TQuery(g_DB, getDatesQueryCallback, getDatesQuery, client);
+	}
+	return Plugin_Handled;
+	
+}
+
+public void getDatesQueryCallback(Handle owner, Handle hndl, const char[] error, any data) {
+	int client = data;
+	char ends[128];
+	char started[128];
+	char left[64];
+	while (SQL_FetchRow(hndl)) {
+		SQL_FetchString(hndl, 0, started, sizeof(started));
+		SQL_FetchString(hndl, 1, ends, sizeof(ends));
+		SQL_FetchString(hndl, 2, left, sizeof(left));
+	}
+	
+	Menu VipPanelMenu = CreateMenu(VipPanelMenuHandler);
+	char m_started[256];
+	char m_ends[256];
+	Format(m_started, sizeof(m_started), "Started: %s", started);
+	Format(m_ends, sizeof(m_ends), "Ends: %s (%s Days)", ends, left);
+	SetMenuTitle(VipPanelMenu, "VIP Panel");
+	AddMenuItem(VipPanelMenu, "x", m_started, ITEMDRAW_DISABLED);
+	AddMenuItem(VipPanelMenu, "x", m_ends, ITEMDRAW_DISABLED);
+	DisplayMenu(VipPanelMenu, client, 60);
+}
+
+public int VipPanelMenuHandler(Handle menu, MenuAction action, int client, int item) {
+	char cValue[32];
+	GetMenuItem(menu, item, cValue, sizeof(cValue));
+	if (action == MenuAction_Select) {
+		// TODO ?
+	}
 }
 
 public Action cmdAddVip(int client, int args) {
@@ -142,6 +203,7 @@ int g_iReason[MAXPLAYERS + 1];
 public void showDurationSelect(int client, int reason) {
 	Menu selectDuration = CreateMenu(selectDurationHandler);
 	SetMenuTitle(selectDuration, "Select the Duration");
+	AddMenuItem(selectDuration, "testVip", "Test Vip");
 	AddMenuItem(selectDuration, "1", "1 Month");
 	AddMenuItem(selectDuration, "2", "2 Month");
 	AddMenuItem(selectDuration, "3", "3 Month");
@@ -159,8 +221,14 @@ public int selectDurationHandler(Handle menu, MenuAction action, int client, int
 	char cValue[32];
 	GetMenuItem(menu, item, cValue, sizeof(cValue));
 	if (action == MenuAction_Select) {
-		g_iDurationSelected[client] = StringToInt(cValue);
-		showPlayerSelectMenu(client, g_iReason[client]);
+		if (StrEqual(cValue, "testVip")) {
+			g_iDurationSelected[client] = g_iTestVipDuration;
+			g_iReason[client] = 3;
+			showPlayerSelectMenu(client, g_iReason[client]);
+		} else {
+			g_iDurationSelected[client] = StringToInt(cValue);
+			showPlayerSelectMenu(client, g_iReason[client]);
+		}
 	}
 }
 
@@ -173,6 +241,9 @@ public void showPlayerSelectMenu(int client, int reason) {
 	} else if (reason == 2) {
 		menu = CreateMenu(extendChooserMenuHandler);
 		Format(menuTitle, sizeof(menuTitle), "Select a Player to extend %i Month", g_iDurationSelected[client]);
+	} else if (reason == 3) {
+		menu = CreateMenu(targetChooserMenuHandler);
+		Format(menuTitle, sizeof(menuTitle), "Select a Player to grant Test Vip (%i Minutes)", g_iDurationSelected[client]);
 	}
 	if (menu == INVALID_HANDLE)
 		return;
@@ -188,11 +259,11 @@ public void showPlayerSelectMenu(int client, int reason) {
 		if (IsFakeClient(i))
 			continue;
 		
-		if(reason == 2){
-			if(!g_bIsVip[client])
+		if (reason == 2) {
+			if (!g_bIsVip[client])
 				continue;
-		}else if(reason == 1){
-			if(g_bIsVip[client])
+		} else if (reason == 1) {
+			if (g_bIsVip[client])
 				continue;
 		}
 		
@@ -222,14 +293,14 @@ public int targetChooserMenuHandler(Handle menu, MenuAction action, int client, 
 			return;
 		}
 		
-		grantVip(client, target, g_iDurationSelected[client]);
+		grantVip(client, target, g_iDurationSelected[client], g_iReason[client]);
 	}
 	if (action == MenuAction_End) {
 		delete menu;
 	}
 }
 
-public void grantVip(int admin, int client, int duration) {
+public void grantVip(int admin, int client, int duration, int reason) {
 	char admin_playerid[20];
 	GetClientAuthId(admin, AuthId_Steam2, admin_playerid, sizeof(admin_playerid));
 	char admin_playername[MAX_NAME_LENGTH + 8];
@@ -251,11 +322,14 @@ public void grantVip(int admin, int client, int duration) {
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, addVipQuery);
 	
 	char updateTime[1024];
-	Format(updateTime, sizeof(updateTime), "UPDATE tVip SET enddate = DATE_ADD(enddate, INTERVAL %i MONTH) WHERE playerid = '%s';", duration, playerid);
+	if (reason != 3)
+		Format(updateTime, sizeof(updateTime), "UPDATE tVip SET enddate = DATE_ADD(enddate, INTERVAL %i MONTH) WHERE playerid = '%s';", duration, playerid);
+	else
+		Format(updateTime, sizeof(updateTime), "UPDATE tVip SET enddate = DATE_ADD(enddate, INTERVAL %i MINUTE) WHERE playerid = '%s';", duration, playerid);
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, updateTime);
 	
-	CPrintToChat(admin, "{green}Added {orange}%s{green} as VIP with {orange}%i{green} Month", playername, duration);
-	CPrintToChat(client, "{green}You've been granted {orange}%i{green} Month of {orange}VIP{green} by {orange}%N", duration, admin);
+	CPrintToChat(admin, "{green}Added {orange}%s{green} as VIP with {orange}%i{green} %s", playername, duration, reason == 3 ? "Minutes":"Month");
+	CPrintToChat(client, "{green}You've been granted {orange}%i{green} %s of {orange}VIP{green} by {orange}%N", duration, reason == 3 ? "Minutes":"Month", admin);
 	setFlags(client);
 }
 
@@ -304,7 +378,8 @@ public void SQLCheckVIPQuery(Handle owner, Handle hndl, const char[] error, any 
 
 public void setFlags(int client) {
 	g_bIsVip[client] = true;
-	SetUserFlagBits(client, GetUserFlagBits(client) | (1 << g_iFlag));
+	for (int i = 0; i < g_iFlagCount; i++)
+	SetUserFlagBits(client, GetUserFlagBits(client) | (1 << g_iFlags[i]));
 }
 
 public void OnRebuildAdminCache(AdminCachePart part) {
@@ -485,7 +560,7 @@ public int detailsMenuHandler(Handle menu, MenuAction action, int client, int it
 }
 
 stock bool isValidClient(int client) {
-    return (1 <= client <= MaxClients && IsClientInGame(client));
+	return (1 <= client <= MaxClients && IsClientInGame(client));
 }
 
 stock bool isVipCheck(int client) {
