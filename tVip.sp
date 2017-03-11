@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Totenfluch"
-#define PLUGIN_VERSION "1.2"
+#define PLUGIN_VERSION "1.3"
 
 #include <sourcemod>
 #include <sdktools>
@@ -55,7 +55,7 @@ public void OnPluginStart() {
 	AutoExecConfig_SetFile("tVip");
 	AutoExecConfig_SetCreateFile(true);
 	
-	g_hFlag = AutoExecConfig_CreateConVar("tVip_flag", "19", "20=Custom6, 19=Custom5 etc. Numeric Flag See: 'https://wiki.alliedmods.net/Checking_Admin_Flags_(SourceMod_Scripting)' for Definitions ---- Multiple flags seperated with Comma: '16 17 18 19' !!");
+	g_hFlag = AutoExecConfig_CreateConVar("tVip_flag", "19", "20=Custom6, 19=Custom5 etc. Numeric Flag See: 'https://wiki.alliedmods.net/Checking_Admin_Flags_(SourceMod_Scripting)' for Definitions ---- Multiple flags seperated with Space: '16 17 18 19' !!");
 	g_hTestVipDuration = AutoExecConfig_CreateConVar("tVip_testVipDuration", "15", "Test Vip duration in minutes");
 	
 	AutoExecConfig_CleanFile();
@@ -68,6 +68,7 @@ public void OnPluginStart() {
 }
 
 public void OnConfigsExecuted() {
+	g_iFlagCount = 0;
 	g_iTestVipDuration = GetConVarInt(g_hTestVipDuration);
 	char cFlags[256];
 	GetConVarString(g_hFlag, cFlags, sizeof(cFlags));
@@ -260,10 +261,10 @@ public void showPlayerSelectMenu(int client, int reason) {
 			continue;
 		
 		if (reason == 2) {
-			if (!g_bIsVip[client])
+			if (!g_bIsVip[i])
 				continue;
 		} else if (reason == 1) {
-			if (g_bIsVip[client])
+			if (g_bIsVip[i])
 				continue;
 		}
 		
