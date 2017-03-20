@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Totenfluch"
-#define PLUGIN_VERSION "1.3"
+#define PLUGIN_VERSION "1.5"
 
 #include <sourcemod>
 #include <sdktools>
@@ -63,6 +63,7 @@ public void OnPluginStart() {
 	
 	RegAdminCmd("sm_tvip", cmdtVIP, ADMFLAG_ROOT, "Opens the tVIP menu");
 	RegAdminCmd("sm_addvip", cmdAddVip, ADMFLAG_ROOT, "Adds a VIP Usage: sm_addvip \"<SteamID>\" <Duration in Month> \"<Name>\"");
+	RegAdminCmd("sm_removevip", removeVip, ADMFLAG_ROOT, "Removes a VIP Usage: sm_removevip \"<SteamID>\"");
 	RegConsoleCmd("sm_vips", cmdListVips, "Shows all VIPs");
 	RegConsoleCmd("sm_vip", openVipPanel, "Opens the Vip Menu");
 }
@@ -127,9 +128,31 @@ public int VipPanelMenuHandler(Handle menu, MenuAction action, int client, int i
 	}
 }
 
+public Action removeVip(int client, int args){
+	if (args != 1) {
+		if(client != 0)
+			CPrintToChat(client, "{olive}[-T-] {lightred}Invalid Params Usage: sm_removevip \"<SteamID>\"");
+		else
+			PrintToServer("[-T-] Invalid Params Usage: sm_addvip \"<SteamID>\" <Duration in Month> \"<Name>\"");
+		return Plugin_Handled;
+	}
+	
+	char playerid[20];
+	GetCmdArg(1, playerid, sizeof(playerid));
+	char clean_playerid[20];
+	SQL_EscapeString(g_DB, playerid, clean_playerid, sizeof(clean_playerid));
+	
+	deleteVip(clean_playerid);
+	
+	return Plugin_Handled;
+}
+
 public Action cmdAddVip(int client, int args) {
 	if (args != 3) {
-		CPrintToChat(client, "{olive}[-T-] {lightred}Invalid Params Usage: sm_addvip \"<SteamID>\" <Duration in Month> \"<Name>\"");
+		if(client != 0)
+			CPrintToChat(client, "{olive}[-T-] {lightred}Invalid Params Usage: sm_addvip \"<SteamID>\" <Duration in Month> \"<Name>\"");
+		else
+			PrintToServer("[-T-] Invalid Params Usage: sm_addvip \"<SteamID>\" <Duration in Month> \"<Name>\"");
 		return Plugin_Handled;
 	}
 	
@@ -336,9 +359,16 @@ public void grantVip(int admin, int client, int duration, int reason) {
 
 public void grantVipEx(int admin, char playerid[20], int duration, char[] pname) {
 	char admin_playerid[20];
-	GetClientAuthId(admin, AuthId_Steam2, admin_playerid, sizeof(admin_playerid));
+	if(admin != 0)
+		GetClientAuthId(admin, AuthId_Steam2, admin_playerid, sizeof(admin_playerid));
+	else
+		strcopy(admin_playerid, sizeof(admin_playerid), "SERVER-CONSOLE");
 	char admin_playername[MAX_NAME_LENGTH + 8];
-	GetClientName(admin, admin_playername, sizeof(admin_playername));
+	
+	if(admin != 0)
+		GetClientName(admin, admin_playername, sizeof(admin_playername));
+	else
+		strcopy(admin_playername, sizeof(admin_playername), "SERVER-CONSOLE");
 	char clean_admin_playername[MAX_NAME_LENGTH * 2 + 16];
 	SQL_EscapeString(g_DB, admin_playername, clean_admin_playername, sizeof(clean_admin_playername));
 	
@@ -350,7 +380,10 @@ public void grantVipEx(int admin, char playerid[20], int duration, char[] pname)
 	Format(updateTime, sizeof(updateTime), "UPDATE tVip SET enddate = DATE_ADD(enddate, INTERVAL %i MONTH) WHERE playerid = '%s';", duration, playerid);
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, updateTime);
 	
-	CPrintToChat(admin, "{green}Added {orange}%s{green} as VIP with {orange}%i{green} Month", playerid, duration);
+	if(admin != 0)
+		CPrintToChat(admin, "{green}Added {orange}%s{green} as VIP with {orange}%i{green} Month", playerid, duration);
+	else
+		PrintToServer("Added %s as VIP with %i Month", playerid, duration);
 }
 
 public void OnClientPostAdminCheck(int client) {
