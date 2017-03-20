@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Totenfluch"
-#define PLUGIN_VERSION "1.5"
+#define PLUGIN_VERSION "1.6"
 
 #include <sourcemod>
 #include <sdktools>
@@ -51,6 +51,8 @@ public void OnPluginStart() {
 	ENGINE = InnoDB CHARSET = utf8 COLLATE utf8_bin; ");
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, createTableQuery);
 	
+	Format(createTableQuery, sizeof(createTableQuery), "ALTER TABLE `tVip` ADD UNIQUE(`playerid`);");
+	SQL_TQuery(g_DB, SQLErrorCheckCallback, createTableQuery);
 	
 	AutoExecConfig_SetFile("tVip");
 	AutoExecConfig_SetCreateFile(true);
@@ -342,7 +344,7 @@ public void grantVip(int admin, int client, int duration, int reason) {
 	
 	
 	char addVipQuery[4096];
-	Format(addVipQuery, sizeof(addVipQuery), "INSERT INTO `tVip` (`Id`, `timestamp`, `playername`, `playerid`, `enddate`, `admin_playername`, `admin_playerid`) VALUES (NULL, CURRENT_TIMESTAMP, '%s', '%s', CURRENT_TIMESTAMP, '%s', '%s');", clean_playername, playerid, clean_admin_playername, admin_playerid);
+	Format(addVipQuery, sizeof(addVipQuery), "INSERT IGNORE INTO `tVip` (`Id`, `timestamp`, `playername`, `playerid`, `enddate`, `admin_playername`, `admin_playerid`) VALUES (NULL, CURRENT_TIMESTAMP, '%s', '%s', CURRENT_TIMESTAMP, '%s', '%s');", clean_playername, playerid, clean_admin_playername, admin_playerid);
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, addVipQuery);
 	
 	char updateTime[1024];
@@ -373,7 +375,7 @@ public void grantVipEx(int admin, char playerid[20], int duration, char[] pname)
 	SQL_EscapeString(g_DB, admin_playername, clean_admin_playername, sizeof(clean_admin_playername));
 	
 	char addVipQuery[4096];
-	Format(addVipQuery, sizeof(addVipQuery), "INSERT INTO `tVip` (`Id`, `timestamp`, `playername`, `playerid`, `enddate`, `admin_playername`, `admin_playerid`) VALUES (NULL, CURRENT_TIMESTAMP, '%s', '%s', CURRENT_TIMESTAMP, '%s', '%s');", pname, playerid, clean_admin_playername, admin_playerid);
+	Format(addVipQuery, sizeof(addVipQuery), "INSERT IGNORE INTO `tVip` (`Id`, `timestamp`, `playername`, `playerid`, `enddate`, `admin_playername`, `admin_playerid`) VALUES (NULL, CURRENT_TIMESTAMP, '%s', '%s', CURRENT_TIMESTAMP, '%s', '%s');", pname, playerid, clean_admin_playername, admin_playerid);
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, addVipQuery);
 	
 	char updateTime[1024];
