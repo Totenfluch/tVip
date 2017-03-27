@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Totenfluch"
-#define PLUGIN_VERSION "1.8"
+#define PLUGIN_VERSION "2.0"
 
 #include <sourcemod>
 #include <sdktools>
@@ -56,7 +56,7 @@ public void OnPluginStart() {
  		 PRIMARY KEY (`Id`), \
   		 UNIQUE KEY `playerid` (`playerid`)  \
   		 ) ENGINE = InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"
-  	);
+		);
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, createTableQuery);
 	
 	AutoExecConfig_SetFile("tVip");
@@ -73,6 +73,8 @@ public void OnPluginStart() {
 	RegAdminCmd("sm_removevip", removeVip, ADMFLAG_ROOT, "Removes a VIP Usage: sm_removevip \"<SteamID>\"");
 	RegConsoleCmd("sm_vips", cmdListVips, "Shows all VIPs");
 	RegConsoleCmd("sm_vip", openVipPanel, "Opens the Vip Menu");
+	
+	reloadVIPs();
 }
 
 public void OnConfigsExecuted() {
@@ -95,6 +97,8 @@ public Action openVipPanel(int client, int args) {
 	if (g_bIsVip[client]) {
 		char playerid[20];
 		GetClientAuthId(client, AuthId_Steam2, playerid, sizeof(playerid));
+		if (StrContains(playerid, "STEAM_") != -1)
+			strcopy(playerid, sizeof(playerid), playerid[8]);
 		
 		char getDatesQuery[1024];
 		Format(getDatesQuery, sizeof(getDatesQuery), "SELECT timestamp,enddate,DATEDIFF(enddate, NOW()) as timeleft FROM tVip WHERE playerid = '%s';", playerid);
@@ -135,28 +139,34 @@ public int VipPanelMenuHandler(Handle menu, MenuAction action, int client, int i
 	}
 }
 
-public Action removeVip(int client, int args){
+public Action removeVip(int client, int args) {
 	if (args != 1) {
-		if(client != 0)
+		if (client != 0)
 			CPrintToChat(client, "{olive}[-T-] {lightred}Invalid Params Usage: sm_removevip \"<SteamID>\"");
 		else
-			PrintToServer("[-T-] Invalid Params Usage: sm_addvip \"<SteamID>\" <Duration in Month> \"<Name>\"");
+			PrintToServer("[-T-] Invalid Params Usage: sm_removevip \"<SteamID>\"");
 		return Plugin_Handled;
 	}
 	
 	char playerid[20];
 	GetCmdArg(1, playerid, sizeof(playerid));
-	char clean_playerid[20];
-	SQL_EscapeString(g_DB, playerid, clean_playerid, sizeof(clean_playerid));
+	StripQuotes(playerid);
+	if (StrContains(playerid, "STEAM_") != -1)
+		strcopy(playerid, sizeof(playerid), playerid[8]);
+
+	deleteVip(playerid);
 	
-	deleteVip(clean_playerid);
-	
+	if (client != 0)
+		CPrintToChat(client, "{green}Deleted {orange}%s{green} from the Database", playerid);
+	else
+		PrintToServer("Deleted %s from the Database", playerid);
+		
 	return Plugin_Handled;
 }
 
 public Action cmdAddVip(int client, int args) {
 	if (args != 3) {
-		if(client != 0)
+		if (client != 0)
 			CPrintToChat(client, "{olive}[-T-] {lightred}Invalid Params Usage: sm_addvip \"<SteamID>\" <Duration in Month> \"<Name>\"");
 		else
 			PrintToServer("[-T-] Invalid Params Usage: sm_addvip \"<SteamID>\" <Duration in Month> \"<Name>\"");
@@ -165,12 +175,18 @@ public Action cmdAddVip(int client, int args) {
 	
 	char input[22];
 	GetCmdArg(1, input, sizeof(input));
+	StripQuotes(input);
+	if (StrContains(input, "STEAM_") != -1)
+		strcopy(input, sizeof(input), input[8]);
+	
 	char duration[8];
 	GetCmdArg(2, duration, sizeof(duration));
 	int d1 = StringToInt(duration);
-	StripQuotes(input);
+	
 	char input2[20];
 	strcopy(input2, sizeof(input2), input);
+	StripQuotes(input2);
+	
 	char name[MAX_NAME_LENGTH + 8];
 	GetCmdArg(3, name, sizeof(name));
 	StripQuotes(name);
@@ -334,6 +350,8 @@ public int targetChooserMenuHandler(Handle menu, MenuAction action, int client, 
 public void grantVip(int admin, int client, int duration, int reason) {
 	char admin_playerid[20];
 	GetClientAuthId(admin, AuthId_Steam2, admin_playerid, sizeof(admin_playerid));
+	if (StrContains(admin_playerid, "STEAM_") != -1)
+		strcopy(admin_playerid, sizeof(admin_playerid), admin_playerid[8]);
 	char admin_playername[MAX_NAME_LENGTH + 8];
 	GetClientName(admin, admin_playername, sizeof(admin_playername));
 	char clean_admin_playername[MAX_NAME_LENGTH * 2 + 16];
@@ -342,6 +360,8 @@ public void grantVip(int admin, int client, int duration, int reason) {
 	
 	char playerid[20];
 	GetClientAuthId(client, AuthId_Steam2, playerid, sizeof(playerid));
+	if (StrContains(playerid, "STEAM_") != -1)
+		strcopy(playerid, sizeof(playerid), playerid[8]);
 	char playername[MAX_NAME_LENGTH + 8];
 	GetClientName(client, playername, sizeof(playername));
 	char clean_playername[MAX_NAME_LENGTH * 2 + 16];
@@ -366,13 +386,15 @@ public void grantVip(int admin, int client, int duration, int reason) {
 
 public void grantVipEx(int admin, char playerid[20], int duration, char[] pname) {
 	char admin_playerid[20];
-	if(admin != 0)
+	if (admin != 0) {
 		GetClientAuthId(admin, AuthId_Steam2, admin_playerid, sizeof(admin_playerid));
-	else
+		if (StrContains(admin_playerid, "STEAM_") != -1)
+			strcopy(admin_playerid, sizeof(admin_playerid), admin_playerid[8]);
+	} else
 		strcopy(admin_playerid, sizeof(admin_playerid), "SERVER-CONSOLE");
 	char admin_playername[MAX_NAME_LENGTH + 8];
 	
-	if(admin != 0)
+	if (admin != 0)
 		GetClientName(admin, admin_playername, sizeof(admin_playername));
 	else
 		strcopy(admin_playername, sizeof(admin_playername), "SERVER-CONSOLE");
@@ -387,7 +409,7 @@ public void grantVipEx(int admin, char playerid[20], int duration, char[] pname)
 	Format(updateTime, sizeof(updateTime), "UPDATE tVip SET enddate = DATE_ADD(enddate, INTERVAL %i MONTH) WHERE playerid = '%s';", duration, playerid);
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, updateTime);
 	
-	if(admin != 0)
+	if (admin != 0)
 		CPrintToChat(admin, "{green}Added {orange}%s{green} as VIP for {orange}%i{green} Month", playerid, duration);
 	else
 		PrintToServer("Added %s as VIP for %i Month", playerid, duration);
@@ -405,6 +427,8 @@ public void OnClientPostAdminCheck(int client) {
 public void loadVip(int client) {
 	char playerid[20];
 	GetClientAuthId(client, AuthId_Steam2, playerid, sizeof(playerid));
+	if (StrContains(playerid, "STEAM_") != -1)
+		strcopy(playerid, sizeof(playerid), playerid[8]);
 	char isVipQuery[1024];
 	Format(isVipQuery, sizeof(isVipQuery), "SELECT * FROM tVip WHERE playerid = '%s' AND enddate > NOW();", playerid);
 	SQL_TQuery(g_DB, SQLCheckVIPQuery, isVipQuery, client);
@@ -468,7 +492,7 @@ public int menuToRemoveClientsHandler(Handle menu, MenuAction action, int client
 	}
 }
 
-public void deleteVip(char playerid[20]) {
+public void deleteVip(char[] playerid) {
 	char deleteVipQuery[512];
 	Format(deleteVipQuery, sizeof(deleteVipQuery), "DELETE FROM tVip WHERE playerid = '%s';", playerid);
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, deleteVipQuery);
@@ -498,10 +522,13 @@ public int extendChooserMenuHandler(Handle menu, MenuAction action, int client, 
 }
 
 public void extendVip(int client, int userTarget, int duration) {
+	int theUserTarget = GetClientOfUserId(userTarget);
 	char playerid[20];
-	GetClientAuthId(client, AuthId_Steam2, playerid, sizeof(playerid));
+	GetClientAuthId(theUserTarget, AuthId_Steam2, playerid, sizeof(playerid));
+	if (StrContains(playerid, "STEAM_") != -1)
+		strcopy(playerid, sizeof(playerid), playerid[8]);
 	char playername[MAX_NAME_LENGTH + 8];
-	GetClientName(client, playername, sizeof(playername));
+	GetClientName(theUserTarget, playername, sizeof(playername));
 	char clean_playername[MAX_NAME_LENGTH * 2 + 16];
 	SQL_EscapeString(g_DB, playername, clean_playername, sizeof(clean_playername));
 	
