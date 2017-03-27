@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Totenfluch"
-#define PLUGIN_VERSION "1.6"
+#define PLUGIN_VERSION "1.8"
 
 #include <sourcemod>
 #include <sdktools>
@@ -35,7 +35,7 @@ public Plugin myinfo =
 	author = PLUGIN_AUTHOR, 
 	description = "VIP functionality for the GGC", 
 	version = PLUGIN_VERSION, 
-	url = "http://totenfluch.de"
+	url = "https://totenfluch.de"
 };
 
 public void OnPluginStart() {
@@ -45,13 +45,18 @@ public void OnPluginStart() {
 	
 	char createTableQuery[4096];
 	Format(createTableQuery, sizeof(createTableQuery), 
-		"CREATE TABLE IF NOT EXISTS tVip (`Id`BIGINT NOT NULL AUTO_INCREMENT, `timestamp`TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\
-	`playername`VARCHAR(36)CHARACTER SET utf8 COLLATE utf8_bin NOT NULL, `playerid`VARCHAR(20)NOT NULL, `enddate`TIMESTAMP NOT NULL,\
-	`admin_playername`VARCHAR(36)CHARACTER SET utf8 COLLATE utf8_bin NOT NULL, `admin_playerid`VARCHAR(20)NOT NULL, PRIMARY KEY(`Id`))\
-	ENGINE = InnoDB CHARSET = utf8 COLLATE utf8_bin; ");
-	SQL_TQuery(g_DB, SQLErrorCheckCallback, createTableQuery);
-	
-	Format(createTableQuery, sizeof(createTableQuery), "ALTER TABLE `tVip` ADD UNIQUE(`playerid`);");
+		"CREATE TABLE IF NOT EXISTS `tVip` ( \
+ 		`Id` bigint(20) NOT NULL AUTO_INCREMENT, \
+  		`timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, \
+  		`playername` varchar(36) COLLATE utf8_bin NOT NULL, \
+  		`playerid` varchar(20) COLLATE utf8_bin NOT NULL, \
+  		`enddate` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00', \
+  		`admin_playername` varchar(36) COLLATE utf8_bin NOT NULL, \
+  		`admin_playerid` varchar(20) COLLATE utf8_bin NOT NULL, \
+ 		 PRIMARY KEY (`Id`), \
+  		 UNIQUE KEY `playerid` (`playerid`)  \
+  		 ) ENGINE = InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"
+  	);
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, createTableQuery);
 	
 	AutoExecConfig_SetFile("tVip");
@@ -354,7 +359,7 @@ public void grantVip(int admin, int client, int duration, int reason) {
 		Format(updateTime, sizeof(updateTime), "UPDATE tVip SET enddate = DATE_ADD(enddate, INTERVAL %i MINUTE) WHERE playerid = '%s';", duration, playerid);
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, updateTime);
 	
-	CPrintToChat(admin, "{green}Added {orange}%s{green} as VIP with {orange}%i{green} %s", playername, duration, reason == 3 ? "Minutes":"Month");
+	CPrintToChat(admin, "{green}Added {orange}%s{green} as VIP for {orange}%i{green} %s", playername, duration, reason == 3 ? "Minutes":"Month");
 	CPrintToChat(client, "{green}You've been granted {orange}%i{green} %s of {orange}VIP{green} by {orange}%N", duration, reason == 3 ? "Minutes":"Month", admin);
 	setFlags(client);
 }
@@ -383,9 +388,9 @@ public void grantVipEx(int admin, char playerid[20], int duration, char[] pname)
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, updateTime);
 	
 	if(admin != 0)
-		CPrintToChat(admin, "{green}Added {orange}%s{green} as VIP with {orange}%i{green} Month", playerid, duration);
+		CPrintToChat(admin, "{green}Added {orange}%s{green} as VIP for {orange}%i{green} Month", playerid, duration);
 	else
-		PrintToServer("Added %s as VIP with %i Month", playerid, duration);
+		PrintToServer("Added %s as VIP for %i Month", playerid, duration);
 }
 
 public void OnClientPostAdminCheck(int client) {
@@ -600,7 +605,7 @@ stock bool isValidClient(int client) {
 }
 
 stock bool isVipCheck(int client) {
-	return CheckCommandAccess(client, "sm_lul", (1 << g_iFlag), true);
+	return CheckCommandAccess(client, "sm_amIVip", (1 << g_iFlag), true);
 }
 
 public void SQLErrorCheckCallback(Handle owner, Handle hndl, const char[] error, any data) {
