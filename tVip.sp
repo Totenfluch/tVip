@@ -431,13 +431,19 @@ public void loadVip(int client) {
 		strcopy(playerid, sizeof(playerid), playerid[8]);
 	char isVipQuery[1024];
 	Format(isVipQuery, sizeof(isVipQuery), "SELECT * FROM tVip WHERE playerid = '%s' AND enddate > NOW();", playerid);
-	SQL_TQuery(g_DB, SQLCheckVIPQuery, isVipQuery, client);
+	
+	//Pass the userid to prevent assigning flags to a wrong client
+	SQL_TQuery(g_DB, SQLCheckVIPQuery, isVipQuery, GetClientUserId(client));
 }
 
 public void SQLCheckVIPQuery(Handle owner, Handle hndl, const char[] error, any data) {
-	int client = data;
-	while (SQL_FetchRow(hndl)) {
-		setFlags(client);
+	int client = GetClientOfUserId(data);
+	
+	//Check if the user is still ingame
+	if(isValidClient(client) {
+		while (SQL_FetchRow(hndl)) {
+			setFlags(client);
+		}
 	}
 }
 
