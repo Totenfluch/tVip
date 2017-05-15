@@ -153,14 +153,14 @@ public Action removeVip(int client, int args) {
 	StripQuotes(playerid);
 	if (StrContains(playerid, "STEAM_") != -1)
 		strcopy(playerid, sizeof(playerid), playerid[8]);
-
+	
 	deleteVip(playerid);
 	
 	if (client != 0)
 		CPrintToChat(client, "{green}Deleted {orange}%s{green} from the Database", playerid);
 	else
 		PrintToServer("Deleted %s from the Database", playerid);
-		
+	
 	return Plugin_Handled;
 }
 
@@ -440,7 +440,7 @@ public void SQLCheckVIPQuery(Handle owner, Handle hndl, const char[] error, any 
 	int client = GetClientOfUserId(data);
 	
 	//Check if the user is still ingame
-	if(isValidClient(client) {
+	if (isValidClient(client)) {
 		while (SQL_FetchRow(hndl)) {
 			setFlags(client);
 		}
