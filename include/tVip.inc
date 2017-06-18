@@ -19,7 +19,6 @@
  */
 native void tVip_GrantVip(int client, int admin, int duration, int format = 1);
 
-int duration, char[] PlayerName);
 
 
 /**
