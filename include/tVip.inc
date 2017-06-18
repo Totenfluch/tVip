@@ -11,25 +11,15 @@
  * Grant vip to a client.
  *
  * @param admin  		Admin that set VIP.
- * @param client 		Client that will recive VIP
- * @param duration		Vip duration	
- * @param reason 		Duration time format: if = 3 in minutes otherwise in month
+ * @param client 		Client that will recive VIP.
+ * @param duration		Vip duration.
+ * @param format 		Time format, 1 = Minutes - 0 = Month.
  * @noreturn
+ * @error				Invalid client/admin Index or invalid format.
  */
-native void tVip_GrantVip(int admin, int client, int duration, int reason = 1);
+native void tVip_GrantVip(int client, int admin, int duration, int format = 1);
 
-
-
-/**
- * Grant vip to an offine client.
- *
- * @param admin  		Admin that set VIP.
- * @param client 		Client SteamID that will VIP
- * @param duration		Vip duration in month	
- * @param PlayerName	Name of the client that will recive the VIP
- * @noreturn
- */
-native void tVip_GrantVipEx(int admin, char SteamId[20], int duration, char[] PlayerName);
+int duration, char[] PlayerName);
 
 
 /**

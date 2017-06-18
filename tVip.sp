@@ -7,7 +7,7 @@
 #include <sdktools>
 #include <multicolors>
 #include <autoexecconfig>
-#include <tVip>
+
 
 #pragma newdecls required
 
@@ -44,7 +44,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 {
 	//Create natives
 	CreateNative("tVip_GrantVip", NativeGrantVip);
-	CreateNative("tVip_GrantVipEx", NativeGrantVipEx);
 	CreateNative("tVip_DeleteVip", NativeDeleteVip);
 	return APLRes_Success;
 }
@@ -365,7 +364,10 @@ public void grantVip(int admin, int client, int duration, int reason) {
 	if (StrContains(admin_playerid, "STEAM_") != -1)
 		strcopy(admin_playerid, sizeof(admin_playerid), admin_playerid[8]);
 	char admin_playername[MAX_NAME_LENGTH + 8];
-	GetClientName(admin, admin_playername, sizeof(admin_playername));
+	if (admin != 0)
+		GetClientName(admin, admin_playername, sizeof(admin_playername));
+	else
+		strcopy(admin_playername, sizeof(admin_playername), "SERVER-CONSOLE");
 	char clean_admin_playername[MAX_NAME_LENGTH * 2 + 16];
 	SQL_EscapeString(g_DB, admin_playername, clean_admin_playername, sizeof(clean_admin_playername));
 	
@@ -667,7 +669,22 @@ public int NativeGrantVip(Handle myplugin, int argc)
 	int admin = GetNativeCell(1);
 	int client = GetNativeCell(2);
 	int duration = GetNativeCell(3);
-	int reason = GetNativeCell(4);
+	int format = GetNativeCell(4);
+	if (format == 1)
+		format = 3;
+	else if (format == 0)
+		format = 1;
+	else
+	{
+		ThrowNativeError(SP_ERROR_NATIVE, "Invalid time format (%d)", format);
+		return;
+	}
+	
+	if (admin == 0)
+	{
+		grantVip(admin, client, duration, format);
+		return;
+	}
 	if (admin < 1 || admin > MaxClients)
 	{
 		ThrowNativeError(SP_ERROR_NATIVE, "Invalid admin index (%d)", admin);
@@ -689,19 +706,9 @@ public int NativeGrantVip(Handle myplugin, int argc)
 		ThrowNativeError(SP_ERROR_NATIVE, "Client %d is not connected", client);
 		return;
 	}
-	grantVip(admin, client, duration, reason);
+	grantVip(admin, client, duration, format);
 }
 
-public int NativeGrantVipEx(Handle myplugin, int argc)
-{
-	char sSteamID[20];
-	char sPlayerName[128];
-	int admin = GetNativeCell(1);
-	GetNativeString(2, sSteamID, sizeof(sSteamID));
-	int duration = GetNativeCell(3);
-	GetNativeString(4, sPlayerName, sizeof(sPlayerName));
-	grantVipEx(admin, sSteamID[19], duration, sPlayerName);
-}
 
 public int NativeDeleteVip(Handle myplugin, int argc)
 {
