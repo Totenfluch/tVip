@@ -1,12 +1,13 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Totenfluch"
-#define PLUGIN_VERSION "2.0"
+#define PLUGIN_VERSION "2.1"
 
 #include <sourcemod>
 #include <sdktools>
 #include <multicolors>
 #include <autoexecconfig>
+
 
 #pragma newdecls required
 
@@ -37,6 +38,16 @@ public Plugin myinfo =
 	version = PLUGIN_VERSION, 
 	url = "https://totenfluch.de"
 };
+
+
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	//Create natives
+	CreateNative("tVip_GrantVip", NativeGrantVip);
+	CreateNative("tVip_DeleteVip", NativeDeleteVip);
+	return APLRes_Success;
+}
+
 
 public void OnPluginStart() {
 	char error[255];
@@ -353,7 +364,10 @@ public void grantVip(int admin, int client, int duration, int reason) {
 	if (StrContains(admin_playerid, "STEAM_") != -1)
 		strcopy(admin_playerid, sizeof(admin_playerid), admin_playerid[8]);
 	char admin_playername[MAX_NAME_LENGTH + 8];
-	GetClientName(admin, admin_playername, sizeof(admin_playername));
+	if (admin != 0)
+		GetClientName(admin, admin_playername, sizeof(admin_playername));
+	else
+		strcopy(admin_playername, sizeof(admin_playername), "SERVER-CONSOLE");
 	char clean_admin_playername[MAX_NAME_LENGTH * 2 + 16];
 	SQL_EscapeString(g_DB, admin_playername, clean_admin_playername, sizeof(clean_admin_playername));
 	
@@ -644,4 +658,65 @@ stock bool isVipCheck(int client) {
 public void SQLErrorCheckCallback(Handle owner, Handle hndl, const char[] error, any data) {
 	if (!StrEqual(error, ""))
 		LogError(error);
+}
+
+
+
+//Natives
+
+public int NativeGrantVip(Handle myplugin, int argc)
+{
+	int client = GetNativeCell(1);
+	int admin = GetNativeCell(2);
+	int duration = GetNativeCell(3);
+	int format = GetNativeCell(4);
+	if (format == 1)
+		format = 3;
+	else if (format == 0)
+		format = 1;
+	else
+	{
+		ThrowNativeError(SP_ERROR_NATIVE, "Invalid time format (%d)", format);
+		return;
+	}
+	
+	if (admin == 0)
+	{
+		grantVip(admin, client, duration, format);
+		return;
+	}
+	if (admin < 1 || admin > MaxClients)
+	{
+		ThrowNativeError(SP_ERROR_NATIVE, "Invalid admin index (%d)", admin);
+		return;
+	}
+	if (!IsClientConnected(admin))
+	{
+		ThrowNativeError(SP_ERROR_NATIVE, "Admin %d is not connected", admin);
+		return;
+	}
+	if (client < 1 || client > MaxClients)
+	{
+		
+		ThrowNativeError(SP_ERROR_NATIVE, "Invalid client index (%d)", client);
+		return;
+	}
+	if (!IsClientConnected(client))
+	{
+		ThrowNativeError(SP_ERROR_NATIVE, "Client %d is not connected", client);
+		return;
+	}
+	grantVip(admin, client, duration, format);
+}
+
+
+public int NativeDeleteVip(Handle myplugin, int argc)
+{
+	char playerid[20];
+	GetNativeString(1, playerid, sizeof(playerid));
+	StripQuotes(playerid);
+	if (StrContains(playerid, "STEAM_") != -1)
+		strcopy(playerid, sizeof(playerid), playerid[8]);
+	
+	deleteVip(playerid);
 } 
