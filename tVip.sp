@@ -666,8 +666,8 @@ public void SQLErrorCheckCallback(Handle owner, Handle hndl, const char[] error,
 
 public int NativeGrantVip(Handle myplugin, int argc)
 {
-	int admin = GetNativeCell(1);
-	int client = GetNativeCell(2);
+	int client = GetNativeCell(1);
+	int admin = GetNativeCell(2);
 	int duration = GetNativeCell(3);
 	int format = GetNativeCell(4);
 	if (format == 1)
