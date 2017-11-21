@@ -8,7 +8,6 @@
 #include <multicolors>
 #include <autoexecconfig>
 
-
 #pragma newdecls required
 
 char dbconfig[] = "tVip";
@@ -27,6 +26,8 @@ Handle g_hFlag;
 int g_iFlags[20];
 int g_iFlagCount = 0;
 
+Handle g_hForward_OnClientLoadedPre;
+Handle g_hForward_OnClientLoadedPost;
 
 bool g_bIsVip[MAXPLAYERS + 1];
 
@@ -84,6 +85,9 @@ public void OnPluginStart() {
 	RegAdminCmd("sm_removevip", removeVip, ADMFLAG_ROOT, "Removes a VIP Usage: sm_removevip \"<SteamID>\"");
 	RegConsoleCmd("sm_vips", cmdListVips, "Shows all VIPs");
 	RegConsoleCmd("sm_vip", openVipPanel, "Opens the Vip Menu");
+	
+	g_hForward_OnClientLoadedPre = CreateGlobalForward( "tVip_OnClientLoadedPre", ET_Event, Param_Cell);
+	g_hForward_OnClientLoadedPost = CreateGlobalForward( "tVip_OnClientLoadedPost", ET_Event, Param_Cell);
 	
 	reloadVIPs();
 }
@@ -453,18 +457,33 @@ public void loadVip(int client) {
 public void SQLCheckVIPQuery(Handle owner, Handle hndl, const char[] error, any data) {
 	int client = GetClientOfUserId(data);
 	
+	Action result = Plugin_Continue;
+	Call_StartForward(g_hForward_OnClientLoadedPre);
+	Call_PushCell(client);
+	Call_Finish(result);
+	
+	if(result != Plugin_Continue && result != Plugin_Changed)
+	{
+		return;
+	}
+	
 	//Check if the user is still ingame
 	if (isValidClient(client)) {
 		while (SQL_FetchRow(hndl)) {
 			setFlags(client);
 		}
 	}
+	
+	Call_StartForward(g_hForward_OnClientLoadedPost);
+	Call_PushCell(client);
+	Call_Finish();
+	
 }
 
 public void setFlags(int client) {
 	g_bIsVip[client] = true;
 	for (int i = 0; i < g_iFlagCount; i++)
-	SetUserFlagBits(client, GetUserFlagBits(client) | (1 << g_iFlags[i]));
+		SetUserFlagBits(client, GetUserFlagBits(client) | (1 << g_iFlags[i]));
 }
 
 public void OnRebuildAdminCache(AdminCachePart part) {
