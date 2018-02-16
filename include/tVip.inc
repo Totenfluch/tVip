@@ -32,7 +32,7 @@ native void tVip_DeleteVip(char SteamId[20]);
 
 public SharedPlugin __pl_tvip =
 {
-	name = "tVIP",
+	name = "tVip",
 	file = "tVip.smx",
 	#if defined REQUIRE_PLUGIN
 	required = 1,
