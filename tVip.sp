@@ -32,7 +32,7 @@ bool g_bIsVip[MAXPLAYERS + 1];
 
 public Plugin myinfo = 
 {
-	name = "tVIP", 
+	name = "tVip", 
 	author = PLUGIN_AUTHOR, 
 	description = "VIP functionality for the GGC", 
 	version = PLUGIN_VERSION, 

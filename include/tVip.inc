@@ -28,15 +28,3 @@ native void tVip_GrantVip(int client, int admin, int duration, int format = 1);
  * @noreturn
  */
 native void tVip_DeleteVip(char SteamId[20]);
-
-
-public SharedPlugin __pl_tvip =
-{
-	name = "tVip",
-	file = "tVip.smx",
-	#if defined REQUIRE_PLUGIN
-	required = 1,
-	#else
-	required = 0,
-	#endif
-};
