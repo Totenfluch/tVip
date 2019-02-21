@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Totenfluch"
-#define PLUGIN_VERSION "2.1"
+#define PLUGIN_VERSION "2.2"
 
 #include <sourcemod>
 #include <sdktools>
@@ -81,7 +81,7 @@ public void OnPluginStart() {
 	AutoExecConfig_ExecuteFile();
 	
 	RegAdminCmd("sm_tvip", cmdtVIP, ADMFLAG_ROOT, "Opens the tVIP menu");
-	RegAdminCmd("sm_addvip", cmdAddVip, ADMFLAG_ROOT, "Adds a VIP Usage: sm_addvip \"<SteamID>\" <Duration in Month> \"<Name>\"");
+	RegAdminCmd("sm_addvip", cmdAddVip, ADMFLAG_ROOT, "Adds a VIP Usage: sm_addvip \"<SteamID>\" <Duration in Month> \"<Name>\" [0=Month,1=Minutes]");
 	RegAdminCmd("sm_removevip", removeVip, ADMFLAG_ROOT, "Removes a VIP Usage: sm_removevip \"<SteamID>\"");
 	RegConsoleCmd("sm_vips", cmdListVips, "Shows all VIPs");
 	RegConsoleCmd("sm_vip", openVipPanel, "Opens the Vip Menu");
@@ -180,9 +180,9 @@ public Action removeVip(int client, int args) {
 }
 
 public Action cmdAddVip(int client, int args) {
-	if (args != 3) {
+	if (args < 3) {
 		if (client != 0)
-			CPrintToChat(client, "{olive}[-T-] {lightred}Invalid Params Usage: sm_addvip \"<SteamID>\" <Duration in Month> \"<Name>\"");
+			CPrintToChat(client, "{olive}[-T-] {lightred}Invalid Params Usage: sm_addvip \"<SteamID>\" <Duration in Month> \"<Name>\" [0=Month,1=Minutes]");
 		else
 			PrintToServer("[-T-] Invalid Params Usage: sm_addvip \"<SteamID>\" <Duration in Month> \"<Name>\"");
 		return Plugin_Handled;
@@ -208,7 +208,14 @@ public Action cmdAddVip(int client, int args) {
 	char clean_name[MAX_NAME_LENGTH * 2 + 16];
 	SQL_EscapeString(g_DB, name, clean_name, sizeof(clean_name));
 	
-	grantVipEx(client, input2, d1, clean_name);
+	int timeFormat = 0;
+	if(args == 4) {
+		char timeFormatString[8];
+		GetCmdArg(4, timeFormatString, sizeof(timeFormatString));
+		timeFormat = StringToInt(timeFormatString);
+	}
+	
+	grantVipEx(client, input2, d1, clean_name, timeFormat);
 	return Plugin_Handled;
 }
 
@@ -402,7 +409,7 @@ public void grantVip(int admin, int client, int duration, int reason) {
 	setFlags(client);
 }
 
-public void grantVipEx(int admin, char playerid[20], int duration, char[] pname) {
+public void grantVipEx(int admin, char playerid[20], int duration, char[] pname, int timeFormat) {
 	char admin_playerid[20];
 	if (admin != 0) {
 		GetClientAuthId(admin, AuthId_Steam2, admin_playerid, sizeof(admin_playerid));
@@ -424,7 +431,11 @@ public void grantVipEx(int admin, char playerid[20], int duration, char[] pname)
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, addVipQuery);
 	
 	char updateTime[1024];
-	Format(updateTime, sizeof(updateTime), "UPDATE tVip SET enddate = DATE_ADD(enddate, INTERVAL %i MONTH) WHERE playerid = '%s';", duration, playerid);
+	if(timeFormat == 1) {
+		Format(updateTime, sizeof(updateTime), "UPDATE tVip SET enddate = DATE_ADD(enddate, INTERVAL %i MINUTE) WHERE playerid = '%s';", duration, playerid);
+	} else {
+		Format(updateTime, sizeof(updateTime), "UPDATE tVip SET enddate = DATE_ADD(enddate, INTERVAL %i MONTH) WHERE playerid = '%s';", duration, playerid);
+	}
 	SQL_TQuery(g_DB, SQLErrorCheckCallback, updateTime);
 	
 	if (admin != 0)
