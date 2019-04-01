@@ -62,7 +62,7 @@ public void OnPluginStart() {
   		`timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, \
   		`playername` varchar(36) COLLATE utf8_bin NOT NULL, \
   		`playerid` varchar(20) COLLATE utf8_bin NOT NULL, \
-  		`enddate` timestamp NOT NULL DEFAULT '1970-01-01 00:00:00', \
+  		`enddate` timestamp NOT NULL DEFAULT '1970-01-01 00:00:01', \
   		`admin_playername` varchar(36) COLLATE utf8_bin NOT NULL, \
   		`admin_playerid` varchar(20) COLLATE utf8_bin NOT NULL, \
  		 PRIMARY KEY (`Id`), \
