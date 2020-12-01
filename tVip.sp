@@ -714,12 +714,6 @@ public int NativeGrantVip(Handle myplugin, int argc)
 		ThrowNativeError(SP_ERROR_NATIVE, "Invalid time format (%d)", format);
 		return;
 	}
-	
-	if (admin == 0)
-	{
-		grantVip(admin, client, duration, format);
-		return;
-	}
 	if (admin < 1 || admin > MaxClients)
 	{
 		ThrowNativeError(SP_ERROR_NATIVE, "Invalid admin index (%d)", admin);
