@@ -371,14 +371,19 @@ public int targetChooserMenuHandler(Handle menu, MenuAction action, int client, 
 
 public void grantVip(int admin, int client, int duration, int reason) {
 	char admin_playerid[20];
-	GetClientAuthId(admin, AuthId_Steam2, admin_playerid, sizeof(admin_playerid));
-	if (StrContains(admin_playerid, "STEAM_") != -1)
-		strcopy(admin_playerid, sizeof(admin_playerid), admin_playerid[8]);
 	char admin_playername[MAX_NAME_LENGTH + 8];
 	if (admin != 0)
+	{
+		GetClientAuthId(admin, AuthId_Steam2, admin_playerid, sizeof(admin_playerid));
 		GetClientName(admin, admin_playername, sizeof(admin_playername));
+		if (StrContains(admin_playerid, "STEAM_") != -1)
+			strcopy(admin_playerid, sizeof(admin_playerid), admin_playerid[8]);
+	}
 	else
-		strcopy(admin_playername, sizeof(admin_playername), "SERVER-CONSOLE");
+	{
+		strcopy(admin_playerid, sizeof(admin_playername), "SERVER-CONSOLE");
+		strcopy(admin_playerid, sizeof(admin_playerid), "SERVER-CONSOLE");
+	}
 	char clean_admin_playername[MAX_NAME_LENGTH * 2 + 16];
 	SQL_EscapeString(g_DB, admin_playername, clean_admin_playername, sizeof(clean_admin_playername));
 	
