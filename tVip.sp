@@ -53,6 +53,12 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 public void OnPluginStart() {
 	char error[255];
 	g_DB = SQL_Connect(dbconfig, true, error, sizeof(error));
+	
+	if (!g_DB)
+	{
+		SetFailState("Error connecting to database: \"%s\"", error);
+	}
+	
 	SQL_SetCharset(g_DB, "utf8");
 	
 	char createTableQuery[4096];
