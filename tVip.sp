@@ -35,7 +35,7 @@ public Plugin myinfo =
 {
 	name = "tVip", 
 	author = PLUGIN_AUTHOR, 
-	description = "VIP functionality for the GGC", 
+	description = "Add time based VIPs ingame", 
 	version = PLUGIN_VERSION, 
 	url = "https://totenfluch.de"
 };
